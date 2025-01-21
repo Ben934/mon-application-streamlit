@@ -24,7 +24,7 @@ data = load_data()
 st.title("Gestion des Ramonages")
 
 # Menu principal
-menu = st.sidebar.radio("Menu", ["Ajouter un client", "Modifier un client", "Statistiques"])
+menu = st.sidebar.radio("Menu", ["Ajouter un client","Clients", "Modifier un client", "Statistiques"])
 
 if menu == "Ajouter un client":
     st.subheader("Ajouter un nouveau client")
@@ -58,6 +58,9 @@ if menu == "Ajouter un client":
         save_data(data)
         st.success("Client ajouté avec succès !")
         st.session_state.clear()
+
+elif menu == "Clients":
+    data
 
 elif menu == "Modifier un client":
     st.subheader("Modifier un client existant")
