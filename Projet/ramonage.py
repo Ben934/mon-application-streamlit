@@ -51,7 +51,7 @@ if submitted:
             "Difficulté d'accès": difficulte_acces,
             "Commentaire": commentaire
         }
-        data = data.append(new_row, ignore_index=True)
+        data = pd.concat([data, new_row], ignore_index=True)
         save_data(data)
         st.success("Nouveau ramonage enregistré avec succès !")
     else:
