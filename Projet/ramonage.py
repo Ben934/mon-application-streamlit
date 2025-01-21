@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import os
+import uuid  # Import de uuid pour générer des identifiants uniques
 
 # Chargement et sauvegarde des données
 def load_data():
@@ -9,13 +10,17 @@ def load_data():
         return pd.read_csv("clients.csv")
     else:
         return pd.DataFrame(columns=[
-            "Nom Client", "Numéro de tel", "Adresse", "Ville", "Code Postal",
+            "id_intervention", "Nom Client", "Numéro de tel", "Adresse", "Ville", "Code Postal",
             "Date d'intervention", "Élément de chauffe",
-            "Difficulté du ramonage", "Difficulté d'accès", "Commentaire"
+            "Difficulté du ramonage", "Difficulté d'accès", "Commentaire", "Prix de l'intervention"
         ])
 
 def save_data(data):
     data.to_csv("clients.csv", index=False)
+
+# Fonction pour générer un id unique pour chaque client
+def generate_id():
+    return str(uuid.uuid4())
 
 # Chargement des données
 data = load_data()
@@ -24,7 +29,7 @@ data = load_data()
 st.title("Gestion des Ramonages")
 
 # Menu principal
-menu = st.sidebar.radio("Menu", ["Ajouter un client","Clients", "Modifier un client", "Statistiques"])
+menu = st.sidebar.radio("Menu", ["Ajouter un client", "Clients", "Modifier un client", "Statistiques"])
 
 if menu == "Ajouter un client":
     st.subheader("Ajouter un nouveau client")
@@ -40,9 +45,11 @@ if menu == "Ajouter un client":
     difficulte_ramonage = st.selectbox("Difficulté du ramonage", ["Facile", "Moyen", "Difficile"], key="nouvelle_difficulte_ramonage")
     difficulte_acces = st.selectbox("Difficulté d'accès", ["Facile", "Moyen", "Difficile"], key="nouvelle_difficulte_acces")
     commentaire = st.text_area("Commentaire", key="nouveau_commentaire")
+    prix_intervention = st.number_input("Prix de l'intervention (€)", min_value=0.0, format="%.2f", key="nouveau_prix")
 
     if st.button("Ajouter client"):
         new_row = {
+            "id_intervention": generate_id(),
             "Nom Client": nom_client,
             "Numéro de tel": numero_tel,
             "Adresse": adresse,
@@ -53,6 +60,7 @@ if menu == "Ajouter un client":
             "Difficulté du ramonage": difficulte_ramonage,
             "Difficulté d'accès": difficulte_acces,
             "Commentaire": commentaire,
+            "Prix de l'intervention": prix_intervention
         }
         data = pd.concat([data, pd.DataFrame([new_row])], ignore_index=True)
         save_data(data)
@@ -60,7 +68,7 @@ if menu == "Ajouter un client":
         st.session_state.clear()
 
 elif menu == "Clients":
-    data
+    st.write(data)
 
 elif menu == "Modifier un client":
     st.subheader("Modifier un client existant")
@@ -70,6 +78,10 @@ elif menu == "Modifier un client":
 
     if not client_data.empty:
         st.success("Client trouvé ! Modifiez les informations ci-dessous :")
+        
+        # Formulaire de modification
+        id_intervention = client_data.iloc[0]["id_intervention"]  # Conserver l'id pour la modification
+        nom_client = st.text_input("Nom Client", value=client_data.iloc[0]["Nom Client"])
         numero_tel = st.text_input("Numéro de tel", value=client_data.iloc[0]["Numéro de tel"])
         adresse = st.text_input("Adresse", value=client_data.iloc[0]["Adresse"])
         ville = st.text_input("Ville", value=client_data.iloc[0]["Ville"])
@@ -82,9 +94,13 @@ elif menu == "Modifier un client":
         difficulte_acces = st.selectbox("Difficulté d'accès", ["Facile", "Moyen", "Difficile"], 
                                         index=["Facile", "Moyen", "Difficile"].index(client_data.iloc[0]["Difficulté d'accès"]))
         commentaire = st.text_area("Commentaire", value=client_data.iloc[0]["Commentaire"])
+        prix_intervention = st.number_input("Prix de l'intervention (€)", min_value=0.0, 
+                                           value=client_data.iloc[0]["Prix de l'intervention"], format="%.2f")
 
+        # Bouton de modification
         if st.button("Modifier client"):
             index = client_data.index[0]
+            data.loc[index, "Nom Client"] = nom_client
             data.loc[index, "Numéro de tel"] = numero_tel
             data.loc[index, "Adresse"] = adresse
             data.loc[index, "Ville"] = ville
@@ -94,8 +110,15 @@ elif menu == "Modifier un client":
             data.loc[index, "Difficulté du ramonage"] = difficulte_ramonage
             data.loc[index, "Difficulté d'accès"] = difficulte_acces
             data.loc[index, "Commentaire"] = commentaire
+            data.loc[index, "Prix de l'intervention"] = prix_intervention
             save_data(data)
             st.success("Client modifié avec succès !")
+        
+        # Bouton de suppression
+        if st.button("Supprimer le client"):
+            data = data[data["id_intervention"] != id_intervention]  # Supprimer par id unique
+            save_data(data)
+            st.success(f"Client avec ID {id_intervention} supprimé avec succès.")
     else:
         st.warning("Client introuvable.")
 
