@@ -42,7 +42,8 @@ with st.form("form_ramonage"):
 # Si le formulaire est soumis, ajouter une nouvelle ligne dans le DataFrame
 if submitted:
     if nom_client and numero_tel and adresse:
-        new_row = {
+        # Créer une nouvelle ligne avec les colonnes alignées
+        new_row = pd.DataFrame([{
             "Nom Client": nom_client,
             "Numéro de tel": numero_tel,
             "Adresse": adresse,
@@ -50,7 +51,9 @@ if submitted:
             "Difficulté du ramonage": difficulte_ramonage,
             "Difficulté d'accès": difficulte_acces,
             "Commentaire": commentaire
-        }
+        }], columns=data.columns)  # Aligner avec les colonnes existantes
+        
+        # Concaténer en respectant les colonnes
         data = pd.concat([data, new_row], ignore_index=True)
         save_data(data)
         st.success("Nouveau ramonage enregistré avec succès !")
