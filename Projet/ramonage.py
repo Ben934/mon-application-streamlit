@@ -8,7 +8,16 @@ FILENAME = "ramonages.csv"
 # Fonction pour charger les données existantes ou créer un fichier vide
 def load_data():
     if os.path.exists(FILENAME):
-        return pd.read_csv(FILENAME)
+        data = pd.read_csv(FILENAME)
+        # Ajouter les colonnes manquantes si elles n'existent pas
+        for column in [
+            "Nom Client", "Numéro de tel", "Adresse", "Ville", "Code Postal", 
+            "Date d'intervention", "Élément de chauffe", "Difficulté du ramonage", 
+            "Difficulté d'accès", "Commentaire"
+        ]:
+            if column not in data.columns:
+                data[column] = None
+        return data
     else:
         return pd.DataFrame(columns=[
             "Nom Client", "Numéro de tel", "Adresse", "Ville", "Code Postal", 
@@ -78,7 +87,10 @@ elif action == "Modifier client":
         adresse = st.text_input("Adresse", client_data.iloc[0]["Adresse"])
         ville = st.text_input("Ville", client_data.iloc[0]["Ville"])
         code_postal = st.text_input("Code Postal", client_data.iloc[0]["Code Postal"])
-        date_intervention = st.date_input("Date d'intervention", pd.to_datetime(client_data.iloc[0]["Date d'intervention"]))
+        date_intervention = st.date_input(
+            "Date d'intervention", 
+            pd.to_datetime(client_data.iloc[0]["Date d'intervention"], errors='coerce')
+        )
         element_chauffe = st.selectbox(
             "Élément de chauffe", 
             ["Cheminée", "Insert", "Poêle à bois"], 
@@ -117,6 +129,6 @@ elif action == "Modifier client":
 
 # Afficher les données des clients par ville
 st.header("Clients par Ville")
-ville_selection = st.selectbox("Sélectionnez une ville :", data["Ville"].unique())
+ville_selection = st.selectbox("Sélectionnez une ville :", data["Ville"].dropna().unique())
 clients_ville = data[data["Ville"] == ville_selection]
 st.write(clients_ville)
