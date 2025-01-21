@@ -12,110 +12,111 @@ def load_data():
     else:
         return pd.DataFrame(columns=[
             "Nom Client", "Numéro de tel", "Adresse", "Ville", "Code Postal", 
-            "Élément de chauffe", "Difficulté du ramonage", "Difficulté d'accès", "Commentaire"
+            "Date d'intervention", "Élément de chauffe", "Difficulté du ramonage", 
+            "Difficulté d'accès", "Commentaire"
         ])
 
-# Fonction pour sauvegarder les données dans le fichier CSV
-def save_data(df):
-    df.to_csv(FILENAME, index=False)
+# Fonction pour enregistrer les données
+def save_data(data):
+    data.to_csv(FILENAME, index=False)
 
-# Charger les données existantes
+# Charger les données
 data = load_data()
 
-# Titre de l'application
-st.title("Enregistrement des Ramonages")
+# Interface Streamlit
+st.title("Gestion des Ramonages")
 
-# Section : Ajouter un nouveau ramonage
-st.header("Ajouter un nouveau ramonage")
+# Choix entre ajouter un nouveau client ou modifier un client existant
+action = st.radio("Action :", ["Nouveau client", "Modifier client"])
 
-with st.form("form_ramonage"):
-    nom_client = st.text_input("Nom du client")
+if action == "Nouveau client":
+    st.header("Ajouter un nouveau client")
+    
+    # Champs de saisie
+    nom_client = st.text_input("Nom Client")
     numero_tel = st.text_input("Numéro de téléphone")
     adresse = st.text_input("Adresse")
     ville = st.text_input("Ville")
     code_postal = st.text_input("Code Postal")
+    date_intervention = st.date_input("Date d'intervention")
     element_chauffe = st.selectbox("Élément de chauffe", ["Cheminée", "Insert", "Poêle à bois"])
     difficulte_ramonage = st.selectbox("Difficulté du ramonage", ["Facile", "Moyen", "Difficile"])
     difficulte_acces = st.selectbox("Difficulté d'accès", ["Facile", "Moyen", "Difficile"])
     commentaire = st.text_area("Commentaire")
-    
-    # Bouton pour soumettre le formulaire
-    submitted = st.form_submit_button("Enregistrer")
 
-# Si le formulaire est soumis, ajouter une nouvelle ligne dans le DataFrame
-if submitted:
-    if nom_client and numero_tel and adresse and ville and code_postal:
-        # Créer une nouvelle ligne avec les colonnes alignées
-        new_row = pd.DataFrame([{
+    # Bouton pour ajouter un nouveau client
+    if st.button("Enregistrer"):
+        new_row = {
             "Nom Client": nom_client,
             "Numéro de tel": numero_tel,
             "Adresse": adresse,
             "Ville": ville,
             "Code Postal": code_postal,
+            "Date d'intervention": str(date_intervention),
             "Élément de chauffe": element_chauffe,
             "Difficulté du ramonage": difficulte_ramonage,
             "Difficulté d'accès": difficulte_acces,
-            "Commentaire": commentaire
-        }], columns=data.columns)
-        
-        # Concaténer en respectant les colonnes
-        data = pd.concat([data, new_row], ignore_index=True)
+            "Commentaire": commentaire,
+        }
+        data = pd.concat([data, pd.DataFrame([new_row])], ignore_index=True)
         save_data(data)
-        st.success("Nouveau ramonage enregistré avec succès !")
-    else:
-        st.error("Veuillez remplir tous les champs obligatoires (nom, numéro, adresse, ville, code postal).")
+        st.success("Client ajouté avec succès !")
+        st.experimental_rerun()
 
-# Section : Modifier ou supprimer une ligne
-st.header("Modifier ou supprimer un ramonage")
-if not data.empty:
-    with st.form("form_edit"):
-        selected_index = st.selectbox("Sélectionnez une ligne à modifier/supprimer", data.index)
-        selected_row = data.iloc[selected_index]
-        
-        nom_client = st.text_input("Nom du client", value=selected_row["Nom Client"])
-        numero_tel = st.text_input("Numéro de téléphone", value=selected_row["Numéro de tel"])
-        adresse = st.text_input("Adresse", value=selected_row["Adresse"])
-        ville = st.text_input("Ville", value=selected_row["Ville"])
-        code_postal = st.text_input("Code Postal", value=selected_row["Code Postal"])
-        element_chauffe = st.selectbox("Élément de chauffe", ["Cheminée", "Insert", "Poêle à bois"], index=["Cheminée", "Insert", "Poêle à bois"].index(selected_row["Élément de chauffe"]))
-        difficulte_ramonage = st.selectbox("Difficulté du ramonage", ["Facile", "Moyen", "Difficile"], index=["Facile", "Moyen", "Difficile"].index(selected_row["Difficulté du ramonage"]))
-        difficulte_acces = st.selectbox("Difficulté d'accès", ["Facile", "Moyen", "Difficile"], index=["Facile", "Moyen", "Difficile"].index(selected_row["Difficulté d'accès"]))
-        commentaire = st.text_area("Commentaire", value=selected_row["Commentaire"])
-        
-        modify = st.form_submit_button("Modifier")
-        delete = st.form_submit_button("Supprimer")
+elif action == "Modifier client":
+    st.header("Modifier un client existant")
     
-    if modify:
-        # Mise à jour de la ligne sélectionnée
-        data.at[selected_index, "Nom Client"] = nom_client
-        data.at[selected_index, "Numéro de tel"] = numero_tel
-        data.at[selected_index, "Adresse"] = adresse
-        data.at[selected_index, "Ville"] = ville
-        data.at[selected_index, "Code Postal"] = code_postal
-        data.at[selected_index, "Élément de chauffe"] = element_chauffe
-        data.at[selected_index, "Difficulté du ramonage"] = difficulte_ramonage
-        data.at[selected_index, "Difficulté d'accès"] = difficulte_acces
-        data.at[selected_index, "Commentaire"] = commentaire
-        save_data(data)
-        st.success("Ramonage modifié avec succès !")
+    # Recherche du client par nom
+    client_nom = st.text_input("Rechercher par Nom Client")
+    client_data = data[data["Nom Client"] == client_nom]
     
-    if delete:
-        # Suppression de la ligne sélectionnée
-        data = data.drop(index=selected_index).reset_index(drop=True)
-        save_data(data)
-        st.success("Ramonage supprimé avec succès !")
+    if not client_data.empty:
+        st.write("Client trouvé. Modifiez les informations ci-dessous :")
+        
+        # Charger les données existantes
+        numero_tel = st.text_input("Numéro de téléphone", client_data.iloc[0]["Numéro de tel"])
+        adresse = st.text_input("Adresse", client_data.iloc[0]["Adresse"])
+        ville = st.text_input("Ville", client_data.iloc[0]["Ville"])
+        code_postal = st.text_input("Code Postal", client_data.iloc[0]["Code Postal"])
+        date_intervention = st.date_input("Date d'intervention", pd.to_datetime(client_data.iloc[0]["Date d'intervention"]))
+        element_chauffe = st.selectbox(
+            "Élément de chauffe", 
+            ["Cheminée", "Insert", "Poêle à bois"], 
+            index=["Cheminée", "Insert", "Poêle à bois"].index(client_data.iloc[0]["Élément de chauffe"])
+        )
+        difficulte_ramonage = st.selectbox(
+            "Difficulté du ramonage", 
+            ["Facile", "Moyen", "Difficile"], 
+            index=["Facile", "Moyen", "Difficile"].index(client_data.iloc[0]["Difficulté du ramonage"])
+        )
+        difficulte_acces = st.selectbox(
+            "Difficulté d'accès", 
+            ["Facile", "Moyen", "Difficile"], 
+            index=["Facile", "Moyen", "Difficile"].index(client_data.iloc[0]["Difficulté d'accès"])
+        )
+        commentaire = st.text_area("Commentaire", client_data.iloc[0]["Commentaire"])
 
-# Section : Représentation des clients par ville
-st.header("Clients par ville")
-if not data.empty:
-    city_counts = data["Ville"].value_counts()
-    st.bar_chart(city_counts)
-else:
-    st.write("Aucun ramonage enregistré pour afficher des statistiques.")
+        # Bouton pour enregistrer les modifications
+        if st.button("Modifier"):
+            index = client_data.index[0]
+            data.loc[index, "Numéro de tel"] = numero_tel
+            data.loc[index, "Adresse"] = adresse
+            data.loc[index, "Ville"] = ville
+            data.loc[index, "Code Postal"] = code_postal
+            data.loc[index, "Date d'intervention"] = str(date_intervention)
+            data.loc[index, "Élément de chauffe"] = element_chauffe
+            data.loc[index, "Difficulté du ramonage"] = difficulte_ramonage
+            data.loc[index, "Difficulté d'accès"] = difficulte_acces
+            data.loc[index, "Commentaire"] = commentaire
+            
+            save_data(data)
+            st.success("Client modifié avec succès !")
+            st.experimental_rerun()
+    elif client_nom:
+        st.warning("Aucun client trouvé avec ce nom.")
 
-# Afficher les données existantes
-st.header("Liste des Ramonages")
-if not data.empty:
-    st.dataframe(data)
-else:
-    st.write("Aucun ramonage enregistré pour le moment.")
+# Afficher les données des clients par ville
+st.header("Clients par Ville")
+ville_selection = st.selectbox("Sélectionnez une ville :", data["Ville"].unique())
+clients_ville = data[data["Ville"] == ville_selection]
+st.write(clients_ville)
