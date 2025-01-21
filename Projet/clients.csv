@@ -1,4 +1,8 @@
 Nom Client,Numéro de tel,Adresse,Ville,Code Postal,Date d'intervention,Élément de chauffe,Difficulté du ramonage,Difficulté d'accès,Commentaire,Prix de l'intervention
-Lhomme,6.0,272,Bouc Bel Air,13320,2025-01-21,Cheminée,Facile,Facile,,75.0
-Picollet,,10 Chemin,Rognac,13340,2025-01-21,Cheminée,Facile,Facile,Puech,20.0
-Peiret,0611335324,,Bouc Bel Air,13320,2025-01-21,Cheminée,Facile,Facile,,60.0
+Lhomme,63567876543,272,Bouc Bel Air,13320,2025-03-12,Cheminée,Facile,Facile,,75.0
+Picollet,69999,10 Chemin,Rognac,13340,2025-01-21,Cheminée,Facile,Facile,Puech,20.0
+Peiret,611335324,,Bouc Bel Air,13320,2025-01-21,Cheminée,Facile,Facile,,60.0
+Figlia,612345641,,Rognac,13340,2025-01-21,Cheminée,Facile,Facile,,20.0
+Dupont,123456789,,Vitrolles,13127,2025-02-13,Cheminée,Facile,Moyen,,75.0
+Isnard,123456789,34,Rognac,13340,2024-12-11,Poêle à bois,Moyen,Difficile,Il est tout le temps derrière,60.0
+Chevallier,1234567890,12,Puyricard,13540,2024-10-09,Cheminée,Facile,Facile,nan,90.0
