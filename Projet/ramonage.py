@@ -3,9 +3,26 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import os
 
-# Chargement et sauvegarde des données
+# URL brute de GitHub
+CSV_URL = "https://raw.githubusercontent.com/Ben934/mon-application-streamlit/main/Projet/clients.csv"
+
 def load_data():
-    return pd.read_csv("clients.csv")
+    try:
+        # Télécharger le fichier CSV depuis l'URL
+        response = requests.get(CSV_URL)
+        if response.status_code == 200:
+            data = pd.read_csv(io.StringIO(response.text))
+            st.success("Données chargées depuis GitHub avec succès.")
+            return data
+        else:
+            st.error("Impossible de télécharger les données depuis GitHub.")
+            return pd.DataFrame()  # Renvoie un DataFrame vide
+    except Exception as e:
+        st.error(f"Erreur lors du chargement des données : {e}")
+        return pd.DataFrame()
+
+# Charger les données
+data = load_data()
 
 def save_data(data):
     data.to_csv("clients.csv", index=False)
