@@ -3,6 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import os
 
+st.write(f"Répertoire courant : {os.getcwd()}")
 # Chargement et sauvegarde des données
 def load_data():
     if os.path.exists("clients.csv"):
@@ -17,6 +18,7 @@ def load_data():
         ])
 
 
+
 def save_data(data):
     data.to_csv("clients.csv", index=False)
 
@@ -25,14 +27,18 @@ data = load_data()
 
 # Fonction pour formater le numéro de téléphone
 def format_tel(numero_tel):
-    if pd.notna(numero_tel) and numero_tel.isdigit():
-        return f"{numero_tel[:3]} {numero_tel[3:6]} {numero_tel[6:]}"  # Format '123 456 789'
+    if pd.notna(numero_tel):
+        numero_tel = str(numero_tel)  # Convertir en chaîne
+        if numero_tel.isdigit():
+            return f"{numero_tel[:3]} {numero_tel[3:6]} {numero_tel[6:]}"  # Format '123 456 789'
     return numero_tel  # Retourne tel quel si NaN ou invalide
 
 # Fonction pour formater le code postal
 def format_code_postal(code_postal):
-    if pd.notna(code_postal) and code_postal.isdigit() and len(code_postal) == 5:
-        return code_postal
+    if pd.notna(code_postal):
+        code_postal = str(code_postal)  # Convertir en chaîne
+        if code_postal.isdigit() and len(code_postal) == 5:
+            return code_postal
     return code_postal  # Retourne tel quel si NaN ou invalide
 
 
@@ -56,15 +62,15 @@ if menu == "Ajouter un client":
     code_postal = st.text_input("Code Postal", key="nouveau_code_postal")
     if code_postal and (not code_postal.isdigit() or len(code_postal) != 5):
         st.error("Le code postal doit contenir exactement 5 chiffres.")
-        adresse = st.text_input("Adresse", key="nouvelle_adresse")
-        ville = st.text_input("Ville", key="nouvelle_ville")
-        code_postal = st.text_input("Code Postal", key="nouveau_code_postal")
-        date_intervention = st.date_input("Date d'intervention", key="nouvelle_date")
-        element_chauffe = st.selectbox("Élément de chauffe", ["Cheminée", "Insert", "Poêle à bois"], key="nouvel_element")
-        difficulte_ramonage = st.selectbox("Difficulté du ramonage", ["Facile", "Moyen", "Difficile"], key="nouvelle_difficulte_ramonage")
-        difficulte_acces = st.selectbox("Difficulté d'accès", ["Facile", "Moyen", "Difficile"], key="nouvelle_difficulte_acces")
-        commentaire = st.text_area("Commentaire", key="nouveau_commentaire")
-        prix_intervention = st.number_input("Prix de l'intervention (€)", min_value=0.0, format="%.2f", key="nouveau_prix")
+    adresse = st.text_input("Adresse", key="nouvelle_adresse")
+    ville = st.text_input("Ville", key="nouvelle_ville")
+   
+    date_intervention = st.date_input("Date d'intervention", key="nouvelle_date")
+    element_chauffe = st.selectbox("Élément de chauffe", ["Cheminée", "Insert", "Poêle à bois"], key="nouvel_element")
+    difficulte_ramonage = st.selectbox("Difficulté du ramonage", ["Facile", "Moyen", "Difficile"], key="nouvelle_difficulte_ramonage")
+    difficulte_acces = st.selectbox("Difficulté d'accès", ["Facile", "Moyen", "Difficile"], key="nouvelle_difficulte_acces")
+    commentaire = st.text_area("Commentaire", key="nouveau_commentaire")
+    prix_intervention = st.number_input("Prix de l'intervention (€)", min_value=0.0, format="%.2f", key="nouveau_prix")
 
     if st.button("Ajouter client"):
         new_row = {
@@ -87,6 +93,8 @@ if menu == "Ajouter un client":
 
 elif menu == "Clients":
     # Affichage des clients avec formatage des champs
+    data["Numéro de tel"] = data["Numéro de tel"].astype(str)
+    data["Code Postal"] = data["Code Postal"].astype(str)
     data["Numéro de tel"] = data["Numéro de tel"].apply(format_tel)
     data["Code Postal"] = data["Code Postal"].apply(format_code_postal)
     st.write(data)
@@ -94,6 +102,8 @@ elif menu == "Clients":
 elif menu == "Modifier un client":
 
     # Affichage des clients avec formatage des champs
+    data["Numéro de tel"] = data["Numéro de tel"].astype(str)
+    data["Code Postal"] = data["Code Postal"].astype(str)
     data["Numéro de tel"] = data["Numéro de tel"].apply(format_tel)
     data["Code Postal"] = data["Code Postal"].apply(format_code_postal)
     st.write(data)
@@ -170,6 +180,8 @@ elif menu == "Modifier un client":
 elif menu == "Statistiques":
 
     # Affichage des clients avec formatage des champs
+    data["Numéro de tel"] = data["Numéro de tel"].astype(str)
+    data["Code Postal"] = data["Code Postal"].astype(str)
     data["Numéro de tel"] = data["Numéro de tel"].apply(format_tel)
     data["Code Postal"] = data["Code Postal"].apply(format_code_postal)
     st.write(data)
