@@ -2,53 +2,35 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import os
-import requests
-import io
 
-# URL brute de GitHub
-CSV_URL = "https://raw.githubusercontent.com/Ben934/mon-application-streamlit/main/Projet/clients.csv"
-
+# Chargement et sauvegarde des données
 def load_data():
-    try:
-        response = requests.get(CSV_URL)
-        if response.status_code == 200:
-            data = pd.read_csv(io.StringIO(response.text))
-            st.success("Données chargées depuis GitHub avec succès.")
-            return data
-        else:
-            st.error("Impossible de télécharger les données depuis GitHub.")
-            return pd.DataFrame()
-    except Exception as e:
-        st.error(f"Erreur lors du chargement des données : {e}")
-        return pd.DataFrame()
+    if os.path.exists("clients.csv"):
+        return pd.read_csv("clients.csv")
+    else:
+        return pd.DataFrame(columns=[
+            "Nom Client", "Numéro de tel", "Adresse", "Ville", "Code Postal",
+            "Date d'intervention", "Élément de chauffe",
+            "Difficulté du ramonage", "Difficulté d'accès", "Commentaire", "Prix de l'intervention"
+        ])
 
-# Charger les données
+def save_data(data):
+    data.to_csv("clients.csv", index=False)
+
+# Chargement des données
 data = load_data()
-
-def prepare_download_link(data):
-    csv_data = data.to_csv(index=False).encode("utf-8")
-    st.download_button(
-        label="Télécharger les données mises à jour",
-        data=csv_data,
-        file_name="clients.csv",
-        mime="text/csv",
-    )
 
 # Fonction pour formater le numéro de téléphone
 def format_tel(numero_tel):
-    if pd.notna(numero_tel):
-        numero_tel = str(numero_tel)
-        if numero_tel.isdigit():
-            return f"{numero_tel[:3]} {numero_tel[3:6]} {numero_tel[6:]}"  # Format '123 456 789'
-    return numero_tel
+    if pd.notna(numero_tel):  # Vérifier si la valeur n'est pas NaN
+        return f"{int(numero_tel):10d}".replace(' ', '').replace('0', '')
+    return numero_tel  # Retourne la valeur NaN ou vide sans modification
 
 # Fonction pour formater le code postal
 def format_code_postal(code_postal):
-    if pd.notna(code_postal):
-        code_postal = str(code_postal)
-        if code_postal.isdigit() and len(code_postal) == 5:
-            return code_postal
-    return code_postal
+    if pd.notna(code_postal):  # Vérifier si la valeur n'est pas NaN
+        return f"{int(code_postal):05d}"
+    return code_postal  # Retourne la valeur NaN ou vide sans modification
 
 # Titre de l'application
 st.title("Gestion des Ramonages")
@@ -62,13 +44,9 @@ if menu == "Ajouter un client":
     # Formulaire d'ajout
     nom_client = st.text_input("Nom Client", key="nouveau_nom")
     numero_tel = st.text_input("Numéro de tel", key="nouveau_tel")
-    if numero_tel and not numero_tel.isdigit():
-        st.error("Le numéro de téléphone doit contenir uniquement des chiffres.")
-    code_postal = st.text_input("Code Postal", key="nouveau_code_postal")
-    if code_postal and (not code_postal.isdigit() or len(code_postal) != 5):
-        st.error("Le code postal doit contenir exactement 5 chiffres.")
     adresse = st.text_input("Adresse", key="nouvelle_adresse")
     ville = st.text_input("Ville", key="nouvelle_ville")
+    code_postal = st.text_input("Code Postal", key="nouveau_code_postal")
     date_intervention = st.date_input("Date d'intervention", key="nouvelle_date")
     element_chauffe = st.selectbox("Élément de chauffe", ["Cheminée", "Insert", "Poêle à bois"], key="nouvel_element")
     difficulte_ramonage = st.selectbox("Difficulté du ramonage", ["Facile", "Moyen", "Difficile"], key="nouvelle_difficulte_ramonage")
@@ -91,35 +69,50 @@ if menu == "Ajouter un client":
             "Prix de l'intervention": prix_intervention
         }
         data = pd.concat([data, pd.DataFrame([new_row])], ignore_index=True)
+        save_data(data)
         st.success("Client ajouté avec succès !")
         st.session_state.clear()
-        prepare_download_link(data)
 
 elif menu == "Clients":
-    if not data.empty:
-        data["Numéro de tel"] = data["Numéro de tel"].astype(str)
-        data["Code Postal"] = data["Code Postal"].astype(str)
-        data["Numéro de tel"] = data["Numéro de tel"].apply(format_tel)
-        data["Code Postal"] = data["Code Postal"].apply(format_code_postal)
-        st.write(data)
-        prepare_download_link(data)
-    else:
-        st.warning("Aucune donnée disponible.")
+    # Affichage des clients avec formatage des champs
+    data["Numéro de tel"] = data["Numéro de tel"].apply(format_tel)
+    data["Code Postal"] = data["Code Postal"].apply(format_code_postal)
+    st.write(data)
 
 elif menu == "Modifier un client":
+    st.subheader("Modifier un client existant")
+
+    # Recherche du client par nom
     nom_recherche = st.text_input("Rechercher un client par nom")
     client_data = data[data["Nom Client"] == nom_recherche]
 
     if not client_data.empty:
-        st.success("Client trouvé !")
+        st.success("Client trouvé ! Modifiez les informations ci-dessous :")
+        
+        # Affichage des données du client dans un tableau
+        st.write("**Données actuelles du client :**")
+        client_data["Numéro de tel"] = client_data["Numéro de tel"].apply(format_tel)
+        client_data["Code Postal"] = client_data["Code Postal"].apply(format_code_postal)
         st.write(client_data)
 
         # Formulaire de modification
         nom_client = st.text_input("Nom Client", value=client_data.iloc[0]["Nom Client"])
-        numero_tel = st.text_input("Numéro de tel", value=client_data.iloc[0]["Numéro de tel"])
+        
+        # Gestion du numéro de téléphone avec vérification de NaN
+        numero_tel_val = client_data.iloc[0]["Numéro de tel"]
+        if pd.notna(numero_tel_val):
+            numero_tel_val = int(numero_tel_val)  # Convertir en int uniquement si non NaN
+        numero_tel = st.text_input("Numéro de tel", value=numero_tel_val)
+
         adresse = st.text_input("Adresse", value=client_data.iloc[0]["Adresse"])
         ville = st.text_input("Ville", value=client_data.iloc[0]["Ville"])
-        code_postal = st.text_input("Code Postal", value=client_data.iloc[0]["Code Postal"])
+        
+        # Gestion du code postal avec vérification de NaN
+        code_postal_val = client_data.iloc[0]["Code Postal"]
+        if pd.notna(code_postal_val):
+            code_postal_val = int(code_postal_val)  # Convertir en int uniquement si non NaN
+        code_postal = st.text_input("Code Postal", value=code_postal_val)
+
         date_intervention = st.date_input("Date d'intervention", value=pd.to_datetime(client_data.iloc[0]["Date d'intervention"]))
         element_chauffe = st.selectbox("Élément de chauffe", ["Cheminée", "Insert", "Poêle à bois"], 
                                        index=["Cheminée", "Insert", "Poêle à bois"].index(client_data.iloc[0]["Élément de chauffe"]))
@@ -131,6 +124,7 @@ elif menu == "Modifier un client":
         prix_intervention = st.number_input("Prix de l'intervention (€)", min_value=0.0, 
                                            value=client_data.iloc[0]["Prix de l'intervention"], format="%.2f")
 
+        # Bouton de modification
         if st.button("Modifier client"):
             index = client_data.index[0]
             data.loc[index, "Nom Client"] = nom_client
@@ -144,14 +138,29 @@ elif menu == "Modifier un client":
             data.loc[index, "Difficulté d'accès"] = difficulte_acces
             data.loc[index, "Commentaire"] = commentaire
             data.loc[index, "Prix de l'intervention"] = prix_intervention
+            save_data(data)
             st.success("Client modifié avec succès !")
-            prepare_download_link(data)
+        
+        # Bouton de suppression
+        if st.button("Supprimer le client"):
+            data = data[data["Nom Client"] != nom_client]
+            save_data(data)
+            st.success(f"{nom_client} a été supprimé avec succès.")
+    else:
+        st.warning("Client introuvable.")
 
 elif menu == "Statistiques":
     st.subheader("Statistiques sur les clients")
+    
+    # Graphique du nombre de clients par ville
+    st.write("**Répartition des clients par ville :**")
     if not data.empty:
         ville_counts = data["Ville"].value_counts()
         fig, ax = plt.subplots()
         ville_counts.plot(kind="bar", ax=ax, color="skyblue")
         ax.set_title("Nombre de clients par ville")
+        ax.set_xlabel("Ville")
+        ax.set_ylabel("Nombre de clients")
         st.pyplot(fig)
+    else:
+        st.warning("Aucune donnée disponible pour générer des statistiques.")
