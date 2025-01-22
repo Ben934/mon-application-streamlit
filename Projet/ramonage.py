@@ -137,8 +137,6 @@ elif menu == "Modifier un client":
         
         # Gestion du numéro de téléphone avec vérification de NaN
         numero_tel_val = client_data.iloc[0]["Numéro de tel"]
-        if pd.notna(numero_tel_val):
-            numero_tel_val = int(numero_tel_val)  # Convertir en int uniquement si non NaN
         numero_tel = st.text_input("Numéro de tel", value=numero_tel_val)
 
         adresse = st.text_input("Adresse", value=client_data.iloc[0]["Adresse"])
