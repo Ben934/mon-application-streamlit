@@ -1,166 +1,218 @@
 import streamlit as st
 import pandas as pd
+from sqlalchemy import create_engine
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import Column, Integer, String, Float, Date
+from sqlalchemy.orm import sessionmaker
 import matplotlib.pyplot as plt
-import os
+import matplotlib.dates as mdates
+import plotly.express as px
+import plotly.graph_objects as go
+from matplotlib.ticker import MaxNLocator
 
-# Chargement et sauvegarde des données
+# Créer la connexion à SQLite
+DATABASE_URL = "sqlite:///clients.db"
+engine = create_engine(DATABASE_URL, echo=True)
+
+# Définir le modèle pour la base de données
+Base = declarative_base()
+
+class Client(Base):
+    __tablename__ = "clients"
+    
+    id = Column(Integer, primary_key=True)
+    nom_client = Column(String, nullable=False)
+    numero_tel = Column(String, nullable=False)
+    adresse = Column(String)
+    ville = Column(String)
+    code_postal = Column(String)
+    date_intervention = Column(Date)
+    element_chauffe = Column(String)
+    difficulte_ramonage = Column(String)
+    difficulte_acces = Column(String)
+    commentaire = Column(String)
+    prix_intervention = Column(Float)
+
+# Créer la table si elle n'existe pas
+Base.metadata.create_all(engine)
+
+# Créer une session
+Session = sessionmaker(bind=engine)
+session = Session()
+
+# Fonction pour charger les clients depuis la base de données
 def load_data():
-    if os.path.exists("clients.csv"):
-        return pd.read_csv("clients.csv")
-    else:
-        return pd.DataFrame(columns=[
-            "Nom Client", "Numéro de tel", "Adresse", "Ville", "Code Postal",
-            "Date d'intervention", "Élément de chauffe",
-            "Difficulté du ramonage", "Difficulté d'accès", "Commentaire", "Prix de l'intervention"
-        ])
+    return pd.read_sql(session.query(Client).statement, session.bind)
 
-def save_data(data):
-    data.to_csv("clients.csv", index=False)
+# Fonction pour ajouter un nouveau client
+def add_client(client_data):
+    new_client = Client(**client_data)
+    session.add(new_client)
+    session.commit()
 
-# Chargement des données
-data = load_data()
+# Fonction pour modifier un client existant
+def update_client(client_id, client_data):
+    client = session.query(Client).filter(Client.id == client_id).first()
+    for key, value in client_data.items():
+        setattr(client, key, value)
+    session.commit()
 
-# Fonction pour formater le numéro de téléphone
-def format_tel(numero_tel):
-    if pd.notna(numero_tel):  # Vérifier si la valeur n'est pas NaN
-        return f"{int(numero_tel):10d}".replace(' ', '').replace('0', '')
-    return numero_tel  # Retourne la valeur NaN ou vide sans modification
+# Fonction pour afficher les données sous forme de DataFrame
+def show_clients():
+    return pd.read_sql(session.query(Client).statement, session.bind)
 
-# Fonction pour formater le code postal
-def format_code_postal(code_postal):
-    if pd.notna(code_postal):  # Vérifier si la valeur n'est pas NaN
-        return f"{int(code_postal):05d}"
-    return code_postal  # Retourne la valeur NaN ou vide sans modification
-
-# Titre de l'application
-st.title("Gestion des Ramonages")
+# Interface Streamlit
+st.title("Gestion des Ramonages avec SQLite")
 
 # Menu principal
-menu = st.sidebar.radio("Menu", ["Ajouter un client", "Clients", "Modifier un client", "Statistiques"])
+menu = st.sidebar.radio("Menu", ["Ajouter un client", "Afficher/Modifier les clients","Statistiques"])
 
 if menu == "Ajouter un client":
     st.subheader("Ajouter un nouveau client")
 
-    # Formulaire d'ajout
-    nom_client = st.text_input("Nom Client", key="nouveau_nom")
-    numero_tel = st.text_input("Numéro de tel", key="nouveau_tel")
-    adresse = st.text_input("Adresse", key="nouvelle_adresse")
-    ville = st.text_input("Ville", key="nouvelle_ville")
-    code_postal = st.text_input("Code Postal", key="nouveau_code_postal")
-    date_intervention = st.date_input("Date d'intervention", key="nouvelle_date")
-    element_chauffe = st.selectbox("Élément de chauffe", ["Cheminée", "Insert", "Poêle à bois"], key="nouvel_element")
-    difficulte_ramonage = st.selectbox("Difficulté du ramonage", ["Facile", "Moyen", "Difficile"], key="nouvelle_difficulte_ramonage")
-    difficulte_acces = st.selectbox("Difficulté d'accès", ["Facile", "Moyen", "Difficile"], key="nouvelle_difficulte_acces")
-    commentaire = st.text_area("Commentaire", key="nouveau_commentaire")
-    prix_intervention = st.number_input("Prix de l'intervention (€)", min_value=0.0, format="%.2f", key="nouveau_prix")
+    nom_client = st.text_input("Nom Client")
+    numero_tel = st.text_input("Numéro de tel")
+    adresse = st.text_input("Adresse")
+    ville = st.text_input("Ville")
+    code_postal = st.text_input("Code Postal")
+    date_intervention = st.date_input("Date d'intervention")
+    element_chauffe = st.selectbox("Élément de chauffe", ["Cheminée", "Insert", "Poêle à bois"])
+    difficulte_ramonage = st.selectbox("Difficulté du ramonage", ["Facile", "Moyen", "Difficile"])
+    difficulte_acces = st.selectbox("Difficulté d'accès", ["Facile", "Moyen", "Difficile"])
+    commentaire = st.text_area("Commentaire")
+    prix_intervention = st.number_input("Prix de l'intervention (€)", min_value=0.0, format="%.2f")
 
     if st.button("Ajouter client"):
-        new_row = {
-            "Nom Client": nom_client,
-            "Numéro de tel": numero_tel,
-            "Adresse": adresse,
-            "Ville": ville,
-            "Code Postal": code_postal,
-            "Date d'intervention": str(date_intervention),
-            "Élément de chauffe": element_chauffe,
-            "Difficulté du ramonage": difficulte_ramonage,
-            "Difficulté d'accès": difficulte_acces,
-            "Commentaire": commentaire,
-            "Prix de l'intervention": prix_intervention
+        # Construire un dictionnaire avec les données du client
+        client_data = {
+            "nom_client": nom_client,
+            "numero_tel": numero_tel,
+            "adresse": adresse,
+            "ville": ville,
+            "code_postal": code_postal,
+            "date_intervention": date_intervention,
+            "element_chauffe": element_chauffe,
+            "difficulte_ramonage": difficulte_ramonage,
+            "difficulte_acces": difficulte_acces,
+            "commentaire": commentaire,
+            "prix_intervention": prix_intervention,
         }
-        data = pd.concat([data, pd.DataFrame([new_row])], ignore_index=True)
-        save_data(data)
+        # Ajouter à la base de données
+        add_client(client_data)
         st.success("Client ajouté avec succès !")
-        st.session_state.clear()
 
-elif menu == "Clients":
-    # Affichage des clients avec formatage des champs
-    data["Numéro de tel"] = data["Numéro de tel"].apply(format_tel)
-    data["Code Postal"] = data["Code Postal"].apply(format_code_postal)
-    st.write(data)
+elif menu == "Afficher/Modifier les clients":
+    st.subheader("Clients")
+    clients = show_clients()
+    st.dataframe(clients)
 
-elif menu == "Modifier un client":
-    st.subheader("Modifier un client existant")
+    client_id = st.number_input("Entrez l'ID du client à modifier", min_value=1, step=1)
+    client_to_edit = session.query(Client).filter(Client.id == client_id).first()
 
-    # Recherche du client par nom
-    nom_recherche = st.text_input("Rechercher un client par nom")
-    client_data = data[data["Nom Client"] == nom_recherche]
+    if client_to_edit:
+        st.write(f"Modifications pour le client : {client_to_edit.nom_client}")
 
-    if not client_data.empty:
-        st.success("Client trouvé ! Modifiez les informations ci-dessous :")
-        
-        # Affichage des données du client dans un tableau
-        st.write("**Données actuelles du client :**")
-        client_data["Numéro de tel"] = client_data["Numéro de tel"].apply(format_tel)
-        client_data["Code Postal"] = client_data["Code Postal"].apply(format_code_postal)
-        st.write(client_data)
+        new_nom_client = st.text_input("Nom Client", value=client_to_edit.nom_client)
+        new_numero_tel = st.text_input("Numéro de tel", value=client_to_edit.numero_tel)
+        new_adresse = st.text_input("Adresse", value=client_to_edit.adresse)
+        new_ville = st.text_input("Ville", value=client_to_edit.ville)
+        new_code_postal = st.text_input("Code Postal", value=client_to_edit.code_postal)
+        new_date_intervention = st.date_input("Date d'intervention", value=client_to_edit.date_intervention)
+        new_element_chauffe = st.selectbox("Élément de chauffe", ["Cheminée", "Insert", "Poêle à bois"], index=["Cheminée", "Insert", "Poêle à bois"].index(client_to_edit.element_chauffe))
+        new_difficulte_ramonage = st.selectbox("Difficulté du ramonage", ["Facile", "Moyen", "Difficile"], index=["Facile", "Moyen", "Difficile"].index(client_to_edit.difficulte_ramonage))
+        new_difficulte_acces = st.selectbox("Difficulté d'accès", ["Facile", "Moyen", "Difficile"], index=["Facile", "Moyen", "Difficile"].index(client_to_edit.difficulte_acces))
+        new_commentaire = st.text_area("Commentaire", value=client_to_edit.commentaire)
+        new_prix_intervention = st.number_input("Prix de l'intervention (€)", min_value=0.0, value=client_to_edit.prix_intervention)
 
-        # Formulaire de modification
-        nom_client = st.text_input("Nom Client", value=client_data.iloc[0]["Nom Client"])
-        
-        # Gestion du numéro de téléphone avec vérification de NaN
-        numero_tel_val = client_data.iloc[0]["Numéro de tel"]
-        if pd.notna(numero_tel_val):
-            numero_tel_val = int(numero_tel_val)  # Convertir en int uniquement si non NaN
-        numero_tel = st.text_input("Numéro de tel", value=numero_tel_val)
-
-        adresse = st.text_input("Adresse", value=client_data.iloc[0]["Adresse"])
-        ville = st.text_input("Ville", value=client_data.iloc[0]["Ville"])
-        
-        # Gestion du code postal avec vérification de NaN
-        code_postal_val = client_data.iloc[0]["Code Postal"]
-        if pd.notna(code_postal_val):
-            code_postal_val = int(code_postal_val)  # Convertir en int uniquement si non NaN
-        code_postal = st.text_input("Code Postal", value=code_postal_val)
-
-        date_intervention = st.date_input("Date d'intervention", value=pd.to_datetime(client_data.iloc[0]["Date d'intervention"]))
-        element_chauffe = st.selectbox("Élément de chauffe", ["Cheminée", "Insert", "Poêle à bois"], 
-                                       index=["Cheminée", "Insert", "Poêle à bois"].index(client_data.iloc[0]["Élément de chauffe"]))
-        difficulte_ramonage = st.selectbox("Difficulté du ramonage", ["Facile", "Moyen", "Difficile"], 
-                                           index=["Facile", "Moyen", "Difficile"].index(client_data.iloc[0]["Difficulté du ramonage"]))
-        difficulte_acces = st.selectbox("Difficulté d'accès", ["Facile", "Moyen", "Difficile"], 
-                                        index=["Facile", "Moyen", "Difficile"].index(client_data.iloc[0]["Difficulté d'accès"]))
-        commentaire = st.text_area("Commentaire", value=client_data.iloc[0]["Commentaire"])
-        prix_intervention = st.number_input("Prix de l'intervention (€)", min_value=0.0, 
-                                           value=client_data.iloc[0]["Prix de l'intervention"], format="%.2f")
-
-        # Bouton de modification
         if st.button("Modifier client"):
-            index = client_data.index[0]
-            data.loc[index, "Nom Client"] = nom_client
-            data.loc[index, "Numéro de tel"] = numero_tel
-            data.loc[index, "Adresse"] = adresse
-            data.loc[index, "Ville"] = ville
-            data.loc[index, "Code Postal"] = code_postal
-            data.loc[index, "Date d'intervention"] = str(date_intervention)
-            data.loc[index, "Élément de chauffe"] = element_chauffe
-            data.loc[index, "Difficulté du ramonage"] = difficulte_ramonage
-            data.loc[index, "Difficulté d'accès"] = difficulte_acces
-            data.loc[index, "Commentaire"] = commentaire
-            data.loc[index, "Prix de l'intervention"] = prix_intervention
-            save_data(data)
+            client_data = {
+                "nom_client": new_nom_client,
+                "numero_tel": new_numero_tel,
+                "adresse": new_adresse,
+                "ville": new_ville,
+                "code_postal": new_code_postal,
+                "date_intervention": new_date_intervention,
+                "element_chauffe": new_element_chauffe,
+                "difficulte_ramonage": new_difficulte_ramonage,
+                "difficulte_acces": new_difficulte_acces,
+                "commentaire": new_commentaire,
+                "prix_intervention": new_prix_intervention,
+            }
+            update_client(client_id, client_data)
             st.success("Client modifié avec succès !")
-        
-        # Bouton de suppression
-        if st.button("Supprimer le client"):
-            data = data[data["Nom Client"] != nom_client]
-            save_data(data)
-            st.success(f"{nom_client} a été supprimé avec succès.")
     else:
-        st.warning("Client introuvable.")
+        st.warning("Client non trouvé.")
+    
 
+# Partie Statistiques
 elif menu == "Statistiques":
     st.subheader("Statistiques sur les clients")
-    
-    # Graphique du nombre de clients par ville
-    st.write("**Répartition des clients par ville :**")
+
+    # Charger les données à partir de la base de données SQLite
+    data = show_clients()
+
     if not data.empty:
-        ville_counts = data["Ville"].value_counts()
-        fig, ax = plt.subplots()
-        ville_counts.plot(kind="bar", ax=ax, color="skyblue")
-        ax.set_title("Nombre de clients par ville")
-        ax.set_xlabel("Ville")
-        ax.set_ylabel("Nombre de clients")
-        st.pyplot(fig)
+        # --- Sélection de l'année ---
+        # Extraire les années uniques à partir de la colonne 'date_intervention'
+        data['date_intervention'] = pd.to_datetime(data['date_intervention'])
+        unique_years = data['date_intervention'].dt.year.unique()
+        selected_year = st.selectbox("Sélectionner l'année", unique_years)
+
+        # Filtrer les données en fonction de l'année sélectionnée
+        data_filtered = data[data['date_intervention'].dt.year == selected_year]
+
+        # --- Section KPI ---
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            total_clients = len(data_filtered)
+            st.metric("Nombre de clients", total_clients)
+
+        with col2:
+            total_revenue = data_filtered["prix_intervention"].sum()
+            st.metric("Chiffre d'affaires total (€)", f"{total_revenue:,.2f}")
+
+        with col3:
+            avg_price = data_filtered["prix_intervention"].mean()
+            st.metric("Prix moyen (€)", f"{avg_price:,.2f}")
+
+        # --- Graphiques ---        
+        # 1. Graphique - Nombre de clients par ville
+        st.write("**Répartition des clients par ville :**")
+        ville_counts = data_filtered["ville"].value_counts()
+        fig1 = px.bar(ville_counts, x=ville_counts.index, y=ville_counts.values, labels={'x': 'Ville', 'y': 'Nombre de clients'},
+                      title="Nombre de clients par ville", color=ville_counts.values, color_continuous_scale="Viridis")
+        st.plotly_chart(fig1, use_container_width=True)
+
+        # 2. Graphique - Cumul du prix par mois
+        st.write("**Cumul du prix des interventions par mois :**")
+        data_filtered['mois_annee'] = data_filtered['date_intervention'].dt.to_period('M')
+
+        # Convertir la période en chaîne de caractères
+        data_filtered['mois_annee'] = data_filtered['mois_annee'].astype(str)
+
+        # Maintenant, les périodes sont sous forme de chaînes de caractères, ce qui peut être utilisé dans Plotly.
+        prix_par_mois = data_filtered.groupby('mois_annee')['prix_intervention'].sum().reset_index()
+
+        fig2 = px.line(prix_par_mois, x='mois_annee', y='prix_intervention', 
+                    title="Cumul des prix par mois", labels={'mois_annee': 'Mois', 'prix_intervention': 'Cumul du prix (€)'}, 
+                    markers=True)
+        fig2.update_xaxes(type='category')  # On utilise 'category' pour que les mois apparaissent correctement
+        st.plotly_chart(fig2, use_container_width=True)
+
+
+        # 3. Graphique - Répartition des difficultés de ramonage
+        st.write("**Répartition des difficultés de ramonage :**")
+        difficulte_counts = data_filtered['difficulte_ramonage'].value_counts()
+        fig3 = px.pie(difficulte_counts, names=difficulte_counts.index, values=difficulte_counts.values, 
+                      title="Répartition des difficultés de ramonage", hole=0.3)
+        st.plotly_chart(fig3, use_container_width=True)
+
+        # 4. Graphique - Répartition des clients par élément de chauffe
+        st.write("**Répartition des clients par élément de chauffe :**")
+        element_counts = data_filtered['element_chauffe'].value_counts()
+        fig4 = px.bar(element_counts, x=element_counts.index, y=element_counts.values, 
+                      title="Répartition des clients par élément de chauffe", color=element_counts.values, color_continuous_scale="Plasma")
+        st.plotly_chart(fig4, use_container_width=True)
+
     else:
         st.warning("Aucune donnée disponible pour générer des statistiques.")
