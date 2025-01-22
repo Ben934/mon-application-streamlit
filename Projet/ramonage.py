@@ -4,6 +4,15 @@ import matplotlib.pyplot as plt
 import os
 
 st.write(f"Répertoire courant : {os.getcwd()}")
+file_path = os.path.join(os.getcwd(), "clients.csv")
+if os.path.exists(file_path):
+    st.success(f"Fichier trouvé : {file_path}")
+else:
+    st.error(f"Fichier introuvable : {file_path}")
+import os
+st.write("Fichiers disponibles dans le répertoire :")
+st.write(os.listdir(os.getcwd()))
+
 # Chargement et sauvegarde des données
 def load_data():
     if os.path.exists("clients.csv"):
