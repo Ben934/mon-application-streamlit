@@ -6,13 +6,16 @@ import os
 # Chargement et sauvegarde des données
 def load_data():
     if os.path.exists("clients.csv"):
+        st.info("Chargement des données depuis 'clients.csv'.")
         return pd.read_csv("clients.csv")
     else:
+        st.warning("'clients.csv' introuvable. Création d'un fichier vide.")
         return pd.DataFrame(columns=[
             "Nom Client", "Numéro de tel", "Adresse", "Ville", "Code Postal",
             "Date d'intervention", "Élément de chauffe",
             "Difficulté du ramonage", "Difficulté d'accès", "Commentaire", "Prix de l'intervention"
         ])
+
 
 def save_data(data):
     data.to_csv("clients.csv", index=False)
@@ -22,15 +25,16 @@ data = load_data()
 
 # Fonction pour formater le numéro de téléphone
 def format_tel(numero_tel):
-    if pd.notna(numero_tel):  # Vérifier si la valeur n'est pas NaN
-        return f"{int(numero_tel):10d}".replace(' ', '').replace('0', '')
-    return numero_tel  # Retourne la valeur NaN ou vide sans modification
+    if pd.notna(numero_tel) and numero_tel.isdigit():
+        return f"{numero_tel[:3]} {numero_tel[3:6]} {numero_tel[6:]}"  # Format '123 456 789'
+    return numero_tel  # Retourne tel quel si NaN ou invalide
 
 # Fonction pour formater le code postal
 def format_code_postal(code_postal):
-    if pd.notna(code_postal):  # Vérifier si la valeur n'est pas NaN
-        return f"{int(code_postal):05d}"
-    return code_postal  # Retourne la valeur NaN ou vide sans modification
+    if pd.notna(code_postal) and code_postal.isdigit() and len(code_postal) == 5:
+        return code_postal
+    return code_postal  # Retourne tel quel si NaN ou invalide
+
 
 # Titre de l'application
 st.title("Gestion des Ramonages")
@@ -43,16 +47,24 @@ if menu == "Ajouter un client":
 
     # Formulaire d'ajout
     nom_client = st.text_input("Nom Client", key="nouveau_nom")
+    # Vérification du numéro de téléphone (doit être composé uniquement de chiffres)
     numero_tel = st.text_input("Numéro de tel", key="nouveau_tel")
-    adresse = st.text_input("Adresse", key="nouvelle_adresse")
-    ville = st.text_input("Ville", key="nouvelle_ville")
+    if numero_tel and not numero_tel.isdigit():
+        st.error("Le numéro de téléphone doit contenir uniquement des chiffres.")
+
+    # Vérification du code postal (doit être composé de 5 chiffres)
     code_postal = st.text_input("Code Postal", key="nouveau_code_postal")
-    date_intervention = st.date_input("Date d'intervention", key="nouvelle_date")
-    element_chauffe = st.selectbox("Élément de chauffe", ["Cheminée", "Insert", "Poêle à bois"], key="nouvel_element")
-    difficulte_ramonage = st.selectbox("Difficulté du ramonage", ["Facile", "Moyen", "Difficile"], key="nouvelle_difficulte_ramonage")
-    difficulte_acces = st.selectbox("Difficulté d'accès", ["Facile", "Moyen", "Difficile"], key="nouvelle_difficulte_acces")
-    commentaire = st.text_area("Commentaire", key="nouveau_commentaire")
-    prix_intervention = st.number_input("Prix de l'intervention (€)", min_value=0.0, format="%.2f", key="nouveau_prix")
+    if code_postal and (not code_postal.isdigit() or len(code_postal) != 5):
+        st.error("Le code postal doit contenir exactement 5 chiffres.")
+        adresse = st.text_input("Adresse", key="nouvelle_adresse")
+        ville = st.text_input("Ville", key="nouvelle_ville")
+        code_postal = st.text_input("Code Postal", key="nouveau_code_postal")
+        date_intervention = st.date_input("Date d'intervention", key="nouvelle_date")
+        element_chauffe = st.selectbox("Élément de chauffe", ["Cheminée", "Insert", "Poêle à bois"], key="nouvel_element")
+        difficulte_ramonage = st.selectbox("Difficulté du ramonage", ["Facile", "Moyen", "Difficile"], key="nouvelle_difficulte_ramonage")
+        difficulte_acces = st.selectbox("Difficulté d'accès", ["Facile", "Moyen", "Difficile"], key="nouvelle_difficulte_acces")
+        commentaire = st.text_area("Commentaire", key="nouveau_commentaire")
+        prix_intervention = st.number_input("Prix de l'intervention (€)", min_value=0.0, format="%.2f", key="nouveau_prix")
 
     if st.button("Ajouter client"):
         new_row = {
