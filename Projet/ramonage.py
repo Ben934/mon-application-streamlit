@@ -3,30 +3,9 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import os
 
-# Affiche le répertoire courant et les fichiers disponibles pour diagnostic
-st.write(f"Répertoire courant : {os.getcwd()}")
-st.write("Fichiers disponibles dans le répertoire :")
-st.write(os.listdir(os.getcwd()))
-
-# Vérification du fichier clients.csv
-file_path = os.path.join(os.getcwd(), "clients.csv")
-if os.path.exists(file_path):
-    st.success(f"Fichier trouvé : {file_path}")
-else:
-    st.error(f"Fichier introuvable : {file_path}")
-
 # Chargement et sauvegarde des données
 def load_data():
-    if os.path.exists("clients.csv"):
-        st.info("Chargement des données depuis 'clients.csv'.")
-        return pd.read_csv("clients.csv")
-    else:
-        st.warning("'clients.csv' introuvable. Création d'un fichier vide.")
-        return pd.DataFrame(columns=[
-            "Nom Client", "Numéro de tel", "Adresse", "Ville", "Code Postal",
-            "Date d'intervention", "Élément de chauffe",
-            "Difficulté du ramonage", "Difficulté d'accès", "Commentaire", "Prix de l'intervention"
-        ])
+    return pd.read_csv("clients.csv")
 
 def save_data(data):
     data.to_csv("clients.csv", index=False)
